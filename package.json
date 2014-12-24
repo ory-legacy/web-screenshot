@@ -1,0 +1,12 @@
+{
+  "name": "web-screenshot",
+  "version": "0.0.1",
+  "dependencies": {
+    "phantomjs": "^1.9.13",
+    "express": "^4.10.6",
+    "webshot": "^0.15.3"
+  },
+  "engines": {
+    "node": ">=0.8.0"
+  }
+}
