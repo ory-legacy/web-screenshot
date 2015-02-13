@@ -2,12 +2,16 @@ var webshot = require('webshot'),
     express = require('express'),
     app = express(),
     crypto = require('crypto'),
-    fs = require('fs');
+    fs = require('fs'),
+    lwip = require('lwip');
 
 app.get('/', function (req, res) {
     var url = req.query.url,
-        urlHash = crypto.createHash('md5').update(url).digest('hex'),
-        imgPath = 'screenshots/' + urlHash + '.png',
+        scale = req.query.scale ? req.query.scale : '1',
+        urlHash = crypto.createHash('md5').update(url + '-scale:1').digest('hex'),
+        imgHash = crypto.createHash('md5').update(url + '-scale:' + scale).digest('hex'),
+        imgOriginalPath = 'screenshots/' + urlHash + '.png',
+        imgPath = 'screenshots/' + imgHash + '.png',
         options = {
             phantomConfig: {
                 'ignore-ssl-errors': 'true',
@@ -23,14 +27,31 @@ app.get('/', function (req, res) {
         res.setHeader('content-type', 'image/png');
         fs.createReadStream(imgPath).pipe(res);
     } else {
-        webshot(url, imgPath, options, function (err) {
+        webshot(url, imgOriginalPath, options, function (err) {
             if (err) {
                 res.status(500);
                 res.send('An error occured: ' + err);
                 console.error(err);
             } else {
                 res.setHeader('content-type', 'image/png');
-                fs.createReadStream(imgPath).pipe(res);
+
+                if (fs.existsSync(imgPath)) {
+                    fs.createReadStream(imgPath).pipe(res);
+                } else {
+                    lwip.open(imgOriginalPath, function (err, image) {
+                        image.batch()
+                            .scale(parseFloat(scale))
+                            .writeFile(imgPath, function (err) {
+                                if (err) {
+                                    res.status(500);
+                                    res.send('An error occured: ' + err);
+                                    console.error(err);
+                                    return;
+                                }
+                                fs.createReadStream(imgPath).pipe(res);
+                            });
+                    });
+                }
             }
         });
     }
